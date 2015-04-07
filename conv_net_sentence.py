@@ -280,19 +280,27 @@ def make_idx_data_cv(revs, word_idx_map, cv, max_l=51, k=300, filter_h=5):
   
    
 if __name__=="__main__":
+	"""
+	revs : the list the element is a dict named datum
+	W    : the matrix of word-vector
+	W2   : the matrix of word-vector by the vector 's value is random initial
+	word_idx_map : the word's index in W  (for W2 there is no object record it)
+	vocab: dict the key is word and the value is the time it occurs in the corpus
+
+	"""
     print "loading data...",
     x = cPickle.load(open("mr.p","rb"))
     revs, W, W2, word_idx_map, vocab = x[0], x[1], x[2], x[3], x[4]
     print "data loaded!"
-    mode= sys.argv[1]
-    word_vectors = sys.argv[2]    
+    mode= sys.argv[1] # static or not
+    word_vectors = sys.argv[2]   # random or not 
     if mode=="-nonstatic":
         print "model architecture: CNN-non-static"
         non_static=True
     elif mode=="-static":
         print "model architecture: CNN-static"
         non_static=False
-    execfile("conv_net_classes.py")    
+    execfile("conv_net_classes.py")   # what this is mean ???
     if word_vectors=="-rand":
         print "using: random vectors"
         U = W2
