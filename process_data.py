@@ -7,6 +7,7 @@ import pandas as pd
 def build_data_cv(data_folder, cv=10, clean_string=True):
     """
     Loads data and split into 10 folds.
+	vocab: dict key:word value: the number of word occurence in the corpus
     """
     revs = []
     pos_file = data_folder[0]
@@ -49,6 +50,8 @@ def build_data_cv(data_folder, cv=10, clean_string=True):
 def get_W(word_vecs, k=300):
     """
     Get word matrix. W[i] is the vector for word indexed by i
+	word_idx_map : word's id in W
+	word_vecs: dict key=word val=vec
     """
     vocab_size = len(word_vecs)
     word_idx_map = dict()
@@ -123,11 +126,11 @@ def clean_str_sst(string):
     return string.strip().lower()
 
 if __name__=="__main__":    
-    w2v_file = sys.argv[1]     
-    data_folder = ["rt-polarity.pos","rt-polarity.neg"]    
+    w2v_file = sys.argv[1]    # word2vec file to parse the vector! 
+    data_folder = ["rt-polarity.pos","rt-polarity.neg"]   # train and test data 
     print "loading data...",        
-    revs, vocab = build_data_cv(data_folder, cv=10, clean_string=True)
-    max_l = np.max(pd.DataFrame(revs)["num_words"])
+    revs, vocab = build_data_cv(data_folder, cv=10, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
+    max_l = np.max(pd.DataFrame(revs)["num_words"])  #record the max length of the sentence in the corpus!
     print "data loaded!"
     print "number of sentences: " + str(len(revs))
     print "vocab size: " + str(len(vocab))
@@ -139,8 +142,8 @@ if __name__=="__main__":
     add_unknown_words(w2v, vocab)
     W, word_idx_map = get_W(w2v)
     rand_vecs = {}
-    add_unknown_words(rand_vecs, vocab)
-    W2, _ = get_W(rand_vecs)
+    add_unknown_words(rand_vecs, vocab)  #rand initial the word's vector 
+    W2, _ = get_W(rand_vecs)  # because the word's vector is initialed so the word and it's vector donot need to match
     cPickle.dump([revs, W, W2, word_idx_map, vocab], open("mr.p", "wb"))
     print "dataset created!"
     
