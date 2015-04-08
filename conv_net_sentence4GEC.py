@@ -199,10 +199,13 @@ def train_conv_net(datasets,
             for minibatch_index in np.random.permutation(range(n_train_batches)):
                 cost_epoch = train_model(minibatch_index)
                 set_zero(zero_vec)
+                print minibatch_index
         else:
             for minibatch_index in xrange(n_train_batches):
                 cost_epoch = train_model(minibatch_index)  
                 set_zero(zero_vec)
+                print minibatch_index
+
         train_losses = [test_model(i) for i in xrange(n_train_batches)]
         train_perf = 1 - np.mean(train_losses)
         val_losses = [val_model(i) for i in xrange(n_val_batches)]
@@ -373,14 +376,14 @@ if __name__=="__main__":
                           filter_hs=[3,4,5],
                           conv_non_linear="relu",
                           hidden_units=[100,9], 
-                          shuffle_batch=True, 
+                          shuffle_batch=False, 
                           n_epochs=16,  # determine the time to loop 
                           sqr_norm_lim=9,
                           non_static=non_static,
                           batch_size=50,
                           dropout_rate=[0.5])
 
-    print "perf: " + str(perf)
-    results.append(perf)  
-    print test_tag
-    print str(np.mean(results))
+
+    cPickle.dump(test_tag, open("test_tag.p", "wb"))
+    print "Finish it !"
+
