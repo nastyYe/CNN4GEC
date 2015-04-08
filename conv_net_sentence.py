@@ -181,7 +181,7 @@ def train_conv_net(datasets,
     test_y_pred = classifier.predict(test_layer1_input)
     test_error = T.mean(T.neq(test_y_pred, y))
     test_model_all = theano.function([x,y], test_error) #return the accuracy  
-    test_model_tag = theano.function([x,y],test_y_pred) #return the tag it predict  this is for GEC
+    test_model_tag = theano.function([x],test_y_pred) #return the tag it predict  this is for GEC, no need for y
     #######IMPORTANT######
 
     #start training over mini-batches
