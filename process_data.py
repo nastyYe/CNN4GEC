@@ -7,7 +7,7 @@ import pandas as pd
 def build_data_cv(data_folder, cv=10, clean_string=True):
     """
     Loads data and split into 10 folds.
-	vocab: dict key:word value: the number of word occurence in the corpus
+    vocab: dict key:word value: the number of word occurence in the corpus
     """
     revs = []
     pos_file = data_folder[0]
@@ -50,8 +50,8 @@ def build_data_cv(data_folder, cv=10, clean_string=True):
 def get_W(word_vecs, k=300):
     """
     Get word matrix. W[i] is the vector for word indexed by i
-	word_idx_map : word's id in W
-	word_vecs: dict key=word val=vec
+    word_idx_map : word's id in W
+    word_vecs: dict key=word val=vec
     """
     vocab_size = len(word_vecs)
     word_idx_map = dict()
