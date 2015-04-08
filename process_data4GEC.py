@@ -3,50 +3,47 @@ import cPickle
 from collections import defaultdict
 import sys, re
 import pandas as pd
+import configure
 
 def build_data_cv(data_folder, cv=10, clean_string=True):
     """
     Loads data and split into 10 folds.
     vocab: dict key:word value: the number of word occurence in the corpus
     """
-    revs = []
-    pos_file = data_folder[0]
-    neg_file = data_folder[1]
+
+    train_file = data_folder[0]
+    test_file = data_folder[1]
+
     vocab = defaultdict(float)
-    with open(pos_file, "rb") as f:
-        for line in f:       
-            rev = []
-            rev.append(line.strip())
-            if clean_string:
-                orig_rev = clean_str(" ".join(rev))
-            else:
-                orig_rev = " ".join(rev).lower()
-            words = set(orig_rev.split())
-            for word in words:
-                vocab[word] += 1
-            datum  = {"y":1, 
-                      "text": orig_rev,                             
-                      "num_words": len(orig_rev.split()),
-                      "split": np.random.randint(0,cv)}
-            revs.append(datum)
-    with open(neg_file, "rb") as f:
-        for line in f:       
-            rev = []
-            rev.append(line.strip())
-            if clean_string:
-                orig_rev = clean_str(" ".join(rev))
-            else:
-                orig_rev = " ".join(rev).lower()
-            words = set(orig_rev.split())
-            for word in words:
-                vocab[word] += 1
-            datum  = {"y":0, 
-                      "text": orig_rev,                             
-                      "num_words": len(orig_rev.split()),
-                      "split": np.random.randint(0,cv)}
-            revs.append(datum)
-    return revs, vocab
+
+    revs_train = readTrainTest(train_file,vocab)
+    revs_test  = readTrainTest(test_file,vocab)
+
+    return revs_train,revs_test,vocab
     
+
+def readTrainTest(input1,vocab,clean_string=True):
+    revs = []
+    begin = 7
+    with open(input1,'r') as fr:
+        while True:
+            line = fr.readline()[:-1]
+            if not line:
+                break
+            revs.append(line)
+
+            if clean_string:
+                orig_rev = clean_str(line.strip().lower())
+
+            else:
+                orig_rev = line.strip().lower()
+
+            words = set(orig_rev.split()[begin:])
+            for word in words:
+                vocab[word] += 1
+
+    return revs
+
 def get_W(word_vecs, k=300):
     """
     Get word matrix. W[i] is the vector for word indexed by i
@@ -127,16 +124,24 @@ def clean_str_sst(string):
 
 if __name__=="__main__":    
     w2v_file = sys.argv[1]    # word2vec file to parse the vector! 
-    data_folder = ["rt-polarity.pos","rt-polarity.neg"]   # train and test data 
-    print "loading data...",        
-    revs, vocab = build_data_cv(data_folder, cv=10, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
-    max_l = np.max(pd.DataFrame(revs)["num_words"])  #record the max length of the sentence in the corpus!
+    
+    #data_folder = ["rt-polarity.pos","rt-polarity.neg"]   # train and test data 
+    data_folder = [configure.fTrainToken,configure.fTestToken]
+    
+    print "loading data...",  
+
+    #revs, vocab = build_data_cv(data_folder, cv=10, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
+    revs_train,revs_test,vocab = build_data_cv(data_folder, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
+
+    #max_l = np.max(pd.DataFrame(revs)["num_words"])  #record the max length of the sentence in the corpus!
+    max_l = 8    # Set the max length of the sentence 8
+
     print "data loaded!"
-    print "number of sentences: " + str(len(revs))
+    print "number of sentences: " + str(len(revs_train)+len(revs_test))
     print "vocab size: " + str(len(vocab))
     print "max sentence length: " + str(max_l)
     print "loading word2vec vectors...",
-    w2v = load_bin_vec(w2v_file, vocab)
+    w2v = load_bin_vec(w2v_file, vocab)  #read the vector in the vocab word!
     print "word2vec loaded!"
     print "num words already in word2vec: " + str(len(w2v))
     add_unknown_words(w2v, vocab)
@@ -144,6 +149,5 @@ if __name__=="__main__":
     rand_vecs = {}
     add_unknown_words(rand_vecs, vocab)  #rand initial the word's vector 
     W2, _ = get_W(rand_vecs)  # because the word's vector is initialed so the word and it's vector donot need to match
-    cPickle.dump([revs, W, W2, word_idx_map, vocab], open("mr.p", "wb"))
+    cPickle.dump([revs_train,revs_test, W, W2, word_idx_map, vocab], open("mr.p", "wb"))
     print "dataset created!"
-    
