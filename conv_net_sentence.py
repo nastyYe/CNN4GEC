@@ -1,4 +1,8 @@
 """
+Modify the code: Convolutional Neural Networks for Sentence Classification 
+
+	for GEC task;
+
 Sample code for
 Convolutional Neural Networks for Sentence Classification
 http://arxiv.org/pdf/1408.5882v2.pdf
@@ -7,6 +11,9 @@ Much of the code is modified from
 - deeplearning.net (for ConvNet classes)
 - https://github.com/mdenil/dropout (for dropout)
 - https://groups.google.com/forum/#!topic/pylearn-dev/3QbKtCumAW4 (for Adadelta)
+- https://github.com/yoonkim/CNN_sentence
+
+
 """
 import cPickle
 import numpy as np
@@ -56,7 +63,7 @@ def train_conv_net(datasets,
     lr_decay = adadelta decay parameter
     """    
     rng = np.random.RandomState(3435)
-    img_h = len(datasets[0][0])-1  
+    img_h = len(datasets[0][0])-1 # each instance in train and test is a list of ids; id can be mapped to a vector! 
     filter_w = img_w    
     feature_maps = hidden_units[0]
     filter_shapes = []
@@ -78,15 +85,32 @@ def train_conv_net(datasets,
     zero_vec_tensor = T.vector()
     zero_vec = np.zeros(img_w)
     set_zero = theano.function([zero_vec_tensor], updates=[(Words, T.set_subtensor(Words[0,:], zero_vec_tensor))])
+	"""
+	x.flatten(): turn the matrix to one line 
+	T.cast()   : ture the data type
+	Words[np.array([...index...])]: read the Word[...index...] line;
+		Example:
+			words = [
+					[1,2,3],
+					[2,3,4],
+					[3,4,5]]
+			index =np.array([0,1,1,1])
+			words[index] = [[1,2,3],[2,3,4],[2,3,4],[2,3,4] ]
+	reshape() : ture the shape of the object;
+
+	At last, layer0_input[0] = [[vec],[vec],[vec]]  
+	Here we get the input method for our GEC
+	"""
     layer0_input = Words[T.cast(x.flatten(),dtype="int32")].reshape((x.shape[0],1,x.shape[1],Words.shape[1]))                                  
     conv_layers = []
     layer1_inputs = []
     for i in xrange(len(filter_hs)):
         filter_shape = filter_shapes[i]
         pool_size = pool_sizes[i]
+		# call the function in the conv_net_classes.py 
         conv_layer = LeNetConvPoolLayer(rng, input=layer0_input,image_shape=(batch_size, 1, img_h, img_w),
                                 filter_shape=filter_shape, poolsize=pool_size, non_linear=conv_non_linear)
-        layer1_input = conv_layer.output.flatten(2)
+        layer1_input = conv_layer.output.flatten(2)  # flatten(2) :  turn the object to one line in order of columon!
         conv_layers.append(conv_layer)
         layer1_inputs.append(layer1_input)
     layer1_input = T.concatenate(layer1_inputs,1)
@@ -107,6 +131,7 @@ def train_conv_net(datasets,
     #shuffle dataset and assign to mini batches. if dataset size is not a multiple of mini batches, replicate 
     #extra data (at random)
     np.random.seed(3435)
+	#if the train data is not the multiple of mini batches , replicate the data to satify the condition
     if datasets[0].shape[0] % batch_size > 0:
         extra_data_num = batch_size - datasets[0].shape[0] % batch_size
         train_set = np.random.permutation(datasets[0])   
@@ -114,7 +139,7 @@ def train_conv_net(datasets,
         new_data=np.append(datasets[0],extra_data,axis=0)
     else:
         new_data = datasets[0]
-    new_data = np.random.permutation(new_data)
+    new_data = np.random.permutation(new_data)  #permutate the list: balance the data of different tags;
     n_batches = new_data.shape[0]/batch_size
     n_train_batches = int(np.round(n_batches*0.9))
     #divide train set into train/val sets 
@@ -124,7 +149,9 @@ def train_conv_net(datasets,
     val_set = new_data[n_train_batches*batch_size:,:]     
     train_set_x, train_set_y = shared_dataset((train_set[:,:img_h],train_set[:,-1]))
     val_set_x, val_set_y = shared_dataset((val_set[:,:img_h],val_set[:,-1]))
+	#n_val_batches: number of the validate batches
     n_val_batches = n_batches - n_train_batches
+
     val_model = theano.function([index], classifier.errors(y),
          givens={
             x: val_set_x[index * batch_size: (index + 1) * batch_size],
@@ -135,10 +162,12 @@ def train_conv_net(datasets,
              givens={
                 x: train_set_x[index * batch_size: (index + 1) * batch_size],
                 y: train_set_y[index * batch_size: (index + 1) * batch_size]})               
+
     train_model = theano.function([index], cost, updates=grad_updates,
           givens={
             x: train_set_x[index*batch_size:(index+1)*batch_size],
             y: train_set_y[index*batch_size:(index+1)*batch_size]})     
+	
     test_pred_layers = []
     test_size = test_set_x.shape[0]
     test_layer0_input = Words[T.cast(x.flatten(),dtype="int32")].reshape((test_size,1,img_h,Words.shape[1]))
