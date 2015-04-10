@@ -23,8 +23,6 @@ import theano.tensor as T
 import re
 import warnings
 import sys
-from Key2Value import KV
-
 warnings.filterwarnings("ignore")   
 
 #different non-linearities
@@ -199,13 +197,10 @@ def train_conv_net(datasets,
             for minibatch_index in np.random.permutation(range(n_train_batches)):
                 cost_epoch = train_model(minibatch_index)
                 set_zero(zero_vec)
-                print minibatch_index
         else:
             for minibatch_index in xrange(n_train_batches):
                 cost_epoch = train_model(minibatch_index)  
                 set_zero(zero_vec)
-                print minibatch_index
-
         train_losses = [test_model(i) for i in xrange(n_train_batches)]
         train_perf = 1 - np.mean(train_losses)
         val_losses = [val_model(i) for i in xrange(n_val_batches)]
@@ -287,7 +282,7 @@ def safe_update(dict_to, dict_from):
         dict_to[key] = val
     return dict_to
     
-def get_idx_from_sent(words, word_idx_map, max_l=8, k=300, filter_h=5):
+def get_idx_from_sent(sent, word_idx_map, max_l=51, k=300, filter_h=5):
     """
     Transforms sentence into a list of indices. Pad with zeroes.
     """
@@ -295,7 +290,7 @@ def get_idx_from_sent(words, word_idx_map, max_l=8, k=300, filter_h=5):
     pad = filter_h - 1
     for i in xrange(pad):
         x.append(0)
-   
+    words = sent.split()
     for word in words:
         if word in word_idx_map:
             x.append(word_idx_map[word])
@@ -303,45 +298,23 @@ def get_idx_from_sent(words, word_idx_map, max_l=8, k=300, filter_h=5):
         x.append(0)
     return x
 
-def make_idx_data(revs_train,revs_test, word_idx_map, max_l=8, k=300, filter_h=5):
+def make_idx_data_cv(revs, word_idx_map, cv, max_l=51, k=300, filter_h=5):
     """
     Transforms sentences into a 2-d matrix.
     """
-    train_pre,train_data, test_pre,test_data = [], [], [], []
-
-    train_pre,train_data = getTrainTest_idx_data(revs_train,word_idx_map, max_l, k, filter_h)
-    test_pre,test_data = getTrainTest_idx_data(revs_test,word_idx_map, max_l, k, filter_h)
- 
-    train_data = np.array(train_data,dtype="int")
-    test_data = np.array(test_data,dtype="int")
-
-    return [train_data,test_data,train_pre,test_pre]     
-
-
-def getTrainTest_idx_data(revs,word_idx_map, max_l, k, filter_h):
-    data = []
-    prefix = []
-
-    begin = 7
-    
+    train, test = [], []
     for rev in revs:
-        rev = rev.strip().split()
-        words = rev[begin:]
-        
-        pre   = rev[:begin]  #nid,pid,sid,index,ti,sw,aw
-        pre[-1] = KV.get(pre[-1],"0")
-        pre[-2] = KV.get(pre[-2],"0")
-
-        sent = get_idx_from_sent(words, word_idx_map, max_l, k, filter_h)
-        sent.append(KV.get(pre[-1],0))
-
-        data.append(sent)
-        prefix.append(pre)
-
-    return prefix,data
-
-
-
+        sent = get_idx_from_sent(rev["text"], word_idx_map, max_l, k, filter_h)   
+        sent.append(rev["y"])
+        if rev["split"]==cv:            
+            test.append(sent)        
+        else:  
+            train.append(sent)   
+    train = np.array(train,dtype="int")
+    test = np.array(test,dtype="int")
+    return [train, test]     
+  
+   
 if __name__=="__main__":
     """
     revs : the list the element is a dict named datum
@@ -351,13 +324,9 @@ if __name__=="__main__":
     vocab: dict the key is word and the value is the time it occurs in the corpus
 
     """
-
-
-
     print "loading data...",
-
     x = cPickle.load(open("mr.p","rb"))
-    revs_train,revs_test, W, W2, word_idx_map, vocab = x[0], x[1], x[2], x[3], x[4], x[5]
+    revs, W, W2, word_idx_map, vocab = x[0], x[1], x[2], x[3], x[4]
     print "data loaded!"
     mode= sys.argv[1] # static or not
     word_vectors = sys.argv[2]   # random or not 
@@ -375,31 +344,22 @@ if __name__=="__main__":
         print "using: word2vec vectors"
         U = W
     results = []
-
-    datasets = make_idx_data(revs_train,revs_test, word_idx_map, max_l=56,k=300, filter_h=5)
-
-    perf,test_tag = train_conv_net(datasets,
-                          U,
-                          lr_decay=0.95,
-                          filter_hs=[3,4,5],
-                          conv_non_linear="relu",
-                          hidden_units=[100,9], 
-                          shuffle_batch=False, 
-                          n_epochs=16,  # determine the time to loop 
-                          sqr_norm_lim=9,
-                          non_static=non_static,
-                          batch_size=50,
-                          dropout_rate=[0.5])
-
-
-
-    test_prefix = datasets[3]
-    res = list()
-    for item in zip(test_prefix,test_tag):
-        res.append("\t".join(item[0][:-1])+"\t"+str(item[1])+"\n")
-
-    # Save the file!
-    open("123","w").writelines(res)
-    
-    #cPickle.dump(test_tag, open("test_tag.p", "wb"))
-    print "Finish it !"
+    r = range(0,10)    
+    for i in r:
+        datasets = make_idx_data_cv(revs, word_idx_map, i, max_l=56,k=300, filter_h=5)
+        perf,test_tag = train_conv_net(datasets,
+                              U,
+                              lr_decay=0.95,
+                              filter_hs=[3,4,5],
+                              conv_non_linear="relu",
+                              hidden_units=[100,2], 
+                              shuffle_batch=True, 
+                              n_epochs=1,  # determine the time to loop 
+                              sqr_norm_lim=9,
+                              non_static=non_static,
+                              batch_size=50,
+                              dropout_rate=[0.5])
+        print "cv: " + str(i) + ", perf: " + str(perf)
+        results.append(perf)  
+        print test_tag
+    print str(np.mean(results))
