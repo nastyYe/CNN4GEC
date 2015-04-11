@@ -23,7 +23,10 @@ import theano.tensor as T
 import re
 import warnings
 import sys
-from Key2Value import KV
+from Key2Value import PrepKV as PKV
+from Key2Value import ArtKV as AKV
+import configure
+from ProcessBar import progress
 
 warnings.filterwarnings("ignore")   
 
@@ -43,7 +46,7 @@ def Iden(x):
        
 def train_conv_net(datasets,
                    U,
-                   img_w=300, 
+                   img_w=50, 
                    filter_hs=[3,4,5],
                    hidden_units=[100,2], 
                    dropout_rate=[0.5],
@@ -199,12 +202,13 @@ def train_conv_net(datasets,
             for minibatch_index in np.random.permutation(range(n_train_batches)):
                 cost_epoch = train_model(minibatch_index)
                 set_zero(zero_vec)
-                print minibatch_index
+                progress(50,int(100*minibatch_index/float(n_train_batches) ),1)
         else:
             for minibatch_index in xrange(n_train_batches):
                 cost_epoch = train_model(minibatch_index)  
                 set_zero(zero_vec)
-                print minibatch_index
+                progress(50,int(100*minibatch_index/float(n_train_batches) ),1)
+                #print minibatch_index
 
         train_losses = [test_model(i) for i in xrange(n_train_batches)]
         train_perf = 1 - np.mean(train_losses)
@@ -303,14 +307,14 @@ def get_idx_from_sent(words, word_idx_map, max_l=8, k=300, filter_h=5):
         x.append(0)
     return x
 
-def make_idx_data(revs_train,revs_test, word_idx_map, max_l=8, k=300, filter_h=5):
+def make_idx_data(revs_train,revs_test, word_idx_map, max_l=8, k=300, filter_h=5,isArt=True):
     """
     Transforms sentences into a 2-d matrix.
     """
     train_pre,train_data, test_pre,test_data = [], [], [], []
 
-    train_pre,train_data = getTrainTest_idx_data(revs_train,word_idx_map, max_l, k, filter_h)
-    test_pre,test_data = getTrainTest_idx_data(revs_test,word_idx_map, max_l, k, filter_h)
+    train_pre,train_data = getTrainTest_idx_data(revs_train,word_idx_map, max_l, k, filter_h,isArt)
+    test_pre,test_data = getTrainTest_idx_data(revs_test,word_idx_map, max_l, k, filter_h,isArt)
  
     train_data = np.array(train_data,dtype="int")
     test_data = np.array(test_data,dtype="int")
@@ -318,9 +322,14 @@ def make_idx_data(revs_train,revs_test, word_idx_map, max_l=8, k=300, filter_h=5
     return [train_data,test_data,train_pre,test_pre]     
 
 
-def getTrainTest_idx_data(revs,word_idx_map, max_l, k, filter_h):
+def getTrainTest_idx_data(revs,word_idx_map, max_l, k, filter_h,isArt):
     data = []
     prefix = []
+
+    if isArt:
+        KV = AKV
+    else:
+        KV = PKV
 
     begin = 7
     
@@ -352,11 +361,13 @@ if __name__=="__main__":
 
     """
 
-
+    testRes = configure.fCNNResultArt
 
     print "loading data...",
+    print "You Should Change your Path CNNResPrep or CNNResDet"
+    print "You Should Change the variable isArt"
 
-    x = cPickle.load(open("mr.p","rb"))
+    x = cPickle.load(open("tmp/mr.p","rb"))
     revs_train,revs_test, W, W2, word_idx_map, vocab = x[0], x[1], x[2], x[3], x[4], x[5]
     print "data loaded!"
     mode= sys.argv[1] # static or not
@@ -376,14 +387,15 @@ if __name__=="__main__":
         U = W
     results = []
 
-    datasets = make_idx_data(revs_train,revs_test, word_idx_map, max_l=56,k=300, filter_h=5)
+    datasets = make_idx_data(revs_train,revs_test, word_idx_map, max_l=8,k=50, filter_h=5,isArt=True)
 
     perf,test_tag = train_conv_net(datasets,
                           U,
+                          img_w=50, 
                           lr_decay=0.95,
                           filter_hs=[3,4,5],
                           conv_non_linear="relu",
-                          hidden_units=[100,9], 
+                          hidden_units=[100,3], 
                           shuffle_batch=False, 
                           n_epochs=16,  # determine the time to loop 
                           sqr_norm_lim=9,
@@ -399,7 +411,7 @@ if __name__=="__main__":
         res.append("\t".join(item[0][:-1])+"\t"+str(item[1])+"\n")
 
     # Save the file!
-    open("123","w").writelines(res)
-    
+    open(testRes,"w").writelines(res)
+
     #cPickle.dump(test_tag, open("test_tag.p", "wb"))
     print "Finish it !"
