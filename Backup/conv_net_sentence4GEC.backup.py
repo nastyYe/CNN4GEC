@@ -202,19 +202,19 @@ def train_conv_net(datasets,
             for minibatch_index in np.random.permutation(range(n_train_batches)):
                 cost_epoch = train_model(minibatch_index)
                 set_zero(zero_vec)
-                progress(30,int(100*minibatch_index/float(n_train_batches-1) ),1)
+                progress(50,int(100*minibatch_index/float(n_train_batches-1) ),1)
         else:
             for minibatch_index in xrange(n_train_batches):
                 cost_epoch = train_model(minibatch_index)  
                 set_zero(zero_vec)
-                progress(30,int(100*minibatch_index/float(n_train_batches-1) ),1)
+                progress(50,int(100*minibatch_index/float(n_train_batches-1) ),1)
                 #print minibatch_index
 
         train_losses = [test_model(i) for i in xrange(n_train_batches)]
         train_perf = 1 - np.mean(train_losses)
         val_losses = [val_model(i) for i in xrange(n_val_batches)]
         val_perf = 1- np.mean(val_losses)                        
-        print('epoch %i, train perf %f %%, val perf %f ' % (epoch, train_perf * 100., val_perf*100.))
+        print('epoch %i, train perf %f %%,\t \t val perf %f ' % (epoch, train_perf * 100., val_perf*100.))
         if val_perf >= best_val_perf:
             best_val_perf = val_perf
             # Predict Work!
@@ -292,7 +292,7 @@ def safe_update(dict_to, dict_from):
         dict_to[key] = val
     return dict_to
     
-def get_idx_from_sent(words, word_idx_map, max_l, filter_h):
+def get_idx_from_sent(words, word_idx_map, max_l=8, k=300, filter_h=5):
     """
     Transforms sentence into a list of indices. Pad with zeroes.
     """
@@ -308,14 +308,14 @@ def get_idx_from_sent(words, word_idx_map, max_l, filter_h):
         x.append(0)
     return x
 
-def make_idx_data(revs_train,revs_test, word_idx_map, max_l, filter_h,isArt):
+def make_idx_data(revs_train,revs_test, word_idx_map, max_l=8, k=50, filter_h=5,isArt=True):
     """
     Transforms sentences into a 2-d matrix.
     """
     train_pre,train_data, test_pre,test_data = [], [], [], []
 
-    train_pre,train_data = getTrainTest_idx_data(revs_train,word_idx_map, max_l, filter_h,isArt)
-    test_pre,test_data = getTrainTest_idx_data(revs_test,word_idx_map, max_l, filter_h,isArt)
+    train_pre,train_data = getTrainTest_idx_data(revs_train,word_idx_map, max_l, k, filter_h,isArt)
+    test_pre,test_data = getTrainTest_idx_data(revs_test,word_idx_map, max_l, k, filter_h,isArt)
  
     train_data = np.array(train_data,dtype="int")
     test_data = np.array(test_data,dtype="int")
@@ -323,7 +323,7 @@ def make_idx_data(revs_train,revs_test, word_idx_map, max_l, filter_h,isArt):
     return [train_data,test_data,train_pre,test_pre]     
 
 
-def getTrainTest_idx_data(revs,word_idx_map, max_l, filter_h,isArt):
+def getTrainTest_idx_data(revs,word_idx_map, max_l, k, filter_h,isArt):
     data = []
     prefix = []
 
@@ -342,7 +342,7 @@ def getTrainTest_idx_data(revs,word_idx_map, max_l, filter_h,isArt):
         pre[-1] = KV.get(pre[-1],"0")
         pre[-2] = KV.get(pre[-2],"0")
 
-        sent = get_idx_from_sent(words, word_idx_map, max_l, filter_h)
+        sent = get_idx_from_sent(words, word_idx_map, max_l, k, filter_h)
         sent.append(pre[-1])
 
         data.append(sent)
@@ -362,42 +362,20 @@ if __name__=="__main__":
 
     """
 
-    # Common paramether!!
-    vectorL = 300
-    max_l = 8
-    filter_h = 5
+    testRes = configure.fCNNResultArt
 
-    et = sys.argv[1]
-    if et=="-artordet":
-        input_file = "tmp/artordet.data"
-        testRes = configure.fCNNResultArt
-        classNum = 3
-        isArt = True
-        print "The Vector lenght is %s and classNum is %s" %(vectorL,classNum)
-    elif et=="-prep":
-        input_file = "tmp/prep.data"
-        testRes = configure.fCNNResultPrep
-        classNum = 9
-        isArt = False
-        print "The Vector lenght is %s and classNum is %s" %(vectorL,classNum)
-    else:
-        print """Please input the error type: -artordet -prep
-                 Please input the mode      : -nonstatic -static
-                 please input the vector init: -word2vec -rand
-              """
-        assert(False)
-
+    print "You Should Change your Path CNNResPrep or CNNResDet"
+    print "You Should Change the variable isArt"
+    print "You Should Change the variable img_w"
+    print "You Should Change the variable k    "
 
     print "loading data...",
 
-    x = cPickle.load(open(input_file,"rb"))
+    x = cPickle.load(open("tmp/mr.p","rb"))
     revs_train,revs_test, W, W2, word_idx_map, vocab = x[0], x[1], x[2], x[3], x[4], x[5]
     print "data loaded!"
-
-    #Load the input args
-    mode= sys.argv[2] # static or not
-    word_vectors = sys.argv[3]   # random or not 
-
+    mode= sys.argv[1] # static or not
+    word_vectors = sys.argv[2]   # random or not 
     if mode=="-nonstatic":
         print "model architecture: CNN-non-static"
         non_static=True
@@ -413,17 +391,17 @@ if __name__=="__main__":
         U = W
     results = []
 
-    datasets = make_idx_data(revs_train,revs_test, word_idx_map, max_l, filter_h,isArt)
+    datasets = make_idx_data(revs_train,revs_test, word_idx_map, max_l=8,k=50, filter_h=5,isArt=True)
 
     perf,test_tag = train_conv_net(datasets,
                           U,
-                          img_w=vectorL, 
+                          img_w=50, 
                           lr_decay=0.95,
                           filter_hs=[3,4,5],
                           conv_non_linear="relu",
-                          hidden_units=[100,classNum], 
+                          hidden_units=[100,3], 
                           shuffle_batch=False, 
-                          n_epochs=4,                      # determine the time to loop 
+                          n_epochs=50,  # determine the time to loop 
                           sqr_norm_lim=9,
                           non_static=non_static,
                           batch_size=50,
@@ -439,4 +417,5 @@ if __name__=="__main__":
     # Save the file!
     open(testRes,"w").writelines(res)
 
+    #cPickle.dump(test_tag, open("test_tag.p", "wb"))
     print "Finish it !"

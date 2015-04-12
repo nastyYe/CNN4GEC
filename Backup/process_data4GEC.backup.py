@@ -135,68 +135,21 @@ def clean_str_sst(string):
     string = re.sub(r"\s{2,}", " ", string)    
     return string.strip().lower()
 
-def processPrep(corpus):
-    data_folder = [configure.fTrainTokenPrep,configure.fTestTokenPrep]
+def backup():
+    #w2v_file = sys.argv[1]    # word2vec file to parse the vector! 
+    w2v_file = configure.fTrainTestVecArt
+    vectorL = 50 
 
-    if corpus == "-wiki":
-        w2v_file = configure.fTrainTestVecPrep           # set the word2vector file
-    elif corpus == "-google":
-        w2v_file = "Backup/GoogleNews-vectors-negative300.bin"
-    else:
-        print "Please choose the proper corpus!"
-        assert False
-
-    max_l = 8                                        # Set the max length of the sentence 
-    vectorL = 300                                     # set the length of the word word 
-    out_file = "tmp/prep.data"                       # set the output file of the model
-
-    print "loading data...",  
-
-    revs_train,revs_test,vocab = build_data(data_folder, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
-
-    print "data loaded!"
-    print "number of sentences: " + str(len(revs_train)+len(revs_test))
-    print "vocab size: " + str(len(vocab))
-    print "max sentence length: " + str(max_l)
-    print "loading word2vec vectors...",
-
-    #Load the vector!
-    if corpus == "-wiki":
-        w2v = load_word2vec(w2v_file)
-    elif corpus == "-google":
-        w2v = load_bin_vec(w2v_file,vocab)
-    else:
-        print "Please choose the porper corpus!"
-        assert False
-
-    print "word2vec loaded!"
-    print "num words already in word2vec: " + str(len(w2v))
-    add_unknown_words(w2v, vocab,1,vectorL)
-    W, word_idx_map = get_W(w2v,vectorL)
-    rand_vecs = {}
-    add_unknown_words(rand_vecs, vocab,1,vectorL)  #rand initial the word's vector 
-    W2, _ = get_W(rand_vecs,vectorL)  # because the word's vector is initialed so the word and it's vector donot need to match
-    cPickle.dump([revs_train,revs_test, W, W2, word_idx_map, vocab], open(out_file, "wb"))
-    print "dataset created!"
-
-def processArtOrDet(corpus):
+    #data_folder = ["rt-polarity.pos","rt-polarity.neg"]   # train and test data 
     data_folder = [configure.fTrainTokenArt,configure.fTestTokenArt]
-
-    if corpus == "-wiki":
-        w2v_file = configure.fTrainTestVecArt           # set the word2vector file
-    elif corpus == "-google":
-        w2v_file = "Backup/GoogleNews-vectors-negative300.bin"
-    else:
-        print "Please choose the proper corpus!"
-        assert False
-        
-    vectorL = 50                                    # set the vector length 
-    max_l = 8                                       # Set the max length of the sentence 8
-    out_file = "tmp/artordet.data"                  # set the output file of the model
     
     print "loading data...",  
 
+    #revs, vocab = build_data_cv(data_folder, cv=10, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
     revs_train,revs_test,vocab = build_data(data_folder, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
+
+    #max_l = np.max(pd.DataFrame(revs)["num_words"])  #record the max length of the sentence in the corpus!
+    max_l = 8    # Set the max length of the sentence 8
 
     print "data loaded!"
     print "number of sentences: " + str(len(revs_train)+len(revs_test))
@@ -205,38 +158,95 @@ def processArtOrDet(corpus):
     print "loading word2vec vectors...",
 
     """read the vector in the vocab word, if we don't use the google-news-corpus , we can use other method to replace!"""
-    if corpus == "-wiki":
-        w2v = load_word2vec(w2v_file)
-    elif corpus == "-google":
-        w2v = load_bin_vec(w2v_file,vocab)
-    else:
-        print "Please choose the porper corpus!"
-        assert False
+    #w2v = load_bin_vec(w2v_file, vocab) 
+    w2v = load_word2vec(w2v_file)
 
     print "word2vec loaded!"
     print "num words already in word2vec: " + str(len(w2v))
+    #parameter : (word_vecs, vocab, min_df=1, k=300)
     add_unknown_words(w2v, vocab,1,vectorL)
+    #get_W(word_vecs, k=300)
     W, word_idx_map = get_W(w2v,vectorL)
     rand_vecs = {}
     add_unknown_words(rand_vecs, vocab,1,vectorL)  #rand initial the word's vector 
     W2, _ = get_W(rand_vecs,vectorL)  # because the word's vector is initialed so the word and it's vector donot need to match
-    cPickle.dump([revs_train,revs_test, W, W2, word_idx_map, vocab], open(out_file, "wb"))
+    cPickle.dump([revs_train,revs_test, W, W2, word_idx_map, vocab], open("tmp/mr.p", "wb"))
+    print "dataset created!"
+
+def processArtOrDet():
+
+    #w2v_file = sys.argv[1]    # word2vec file to parse the vector! 
+    w2v_file = configure.fTrainTestVecArt
+    vectorL = 50 
+
+    #data_folder = ["rt-polarity.pos","rt-polarity.neg"]   # train and test data 
+    data_folder = [configure.fTrainTokenArt,configure.fTestTokenArt]
+    
+    print "loading data...",  
+
+    #revs, vocab = build_data_cv(data_folder, cv=10, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
+    revs_train,revs_test,vocab = build_data(data_folder, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
+
+    #max_l = np.max(pd.DataFrame(revs)["num_words"])  #record the max length of the sentence in the corpus!
+    max_l = 8    # Set the max length of the sentence 8
+
+    print "data loaded!"
+    print "number of sentences: " + str(len(revs_train)+len(revs_test))
+    print "vocab size: " + str(len(vocab))
+    print "max sentence length: " + str(max_l)
+    print "loading word2vec vectors...",
+
+    """read the vector in the vocab word, if we don't use the google-news-corpus , we can use other method to replace!"""
+    #w2v = load_bin_vec(w2v_file, vocab) 
+    w2v = load_word2vec(w2v_file)
+
+    print "word2vec loaded!"
+    print "num words already in word2vec: " + str(len(w2v))
+    #parameter : (word_vecs, vocab, min_df=1, k=300)
+    add_unknown_words(w2v, vocab,1,vectorL)
+    #get_W(word_vecs, k=300)
+    W, word_idx_map = get_W(w2v,vectorL)
+    rand_vecs = {}
+    add_unknown_words(rand_vecs, vocab,1,vectorL)  #rand initial the word's vector 
+    W2, _ = get_W(rand_vecs,vectorL)  # because the word's vector is initialed so the word and it's vector donot need to match
+    cPickle.dump([revs_train,revs_test, W, W2, word_idx_map, vocab], open("tmp/mr.p", "wb"))
     print "dataset created!"
     
 
 if __name__=="__main__":    
-    et = sys.argv[1]     # error type: -artordet -prep 
-    corpus = sys.argv[2] # corpus    : -google -wiki
+    #w2v_file = sys.argv[1]    # word2vec file to parse the vector! 
+    w2v_file = configure.fTrainTestVecArt
+    vectorL = 50 
 
-    if et=="-artordet":
-        print "Process the ArtorDet Error!"
-        print "The corpus you choose is %s" %corpus
-        processArtOrDet(corpus)
-    elif et=="-prep":
-        print "Process the Prep Error!"
-        print "The corpus you choose is %s" %corpus
-        processPrep(corpus)
-    else:
-        print "Please load the correct corpus: -prep -artordet"
-        assert False
+    #data_folder = ["rt-polarity.pos","rt-polarity.neg"]   # train and test data 
+    data_folder = [configure.fTrainTokenArt,configure.fTestTokenArt]
+    
+    print "loading data...",  
 
+    #revs, vocab = build_data_cv(data_folder, cv=10, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
+    revs_train,revs_test,vocab = build_data(data_folder, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
+
+    #max_l = np.max(pd.DataFrame(revs)["num_words"])  #record the max length of the sentence in the corpus!
+    max_l = 8    # Set the max length of the sentence 8
+
+    print "data loaded!"
+    print "number of sentences: " + str(len(revs_train)+len(revs_test))
+    print "vocab size: " + str(len(vocab))
+    print "max sentence length: " + str(max_l)
+    print "loading word2vec vectors...",
+
+    """read the vector in the vocab word, if we don't use the google-news-corpus , we can use other method to replace!"""
+    #w2v = load_bin_vec(w2v_file, vocab) 
+    w2v = load_word2vec(w2v_file)
+
+    print "word2vec loaded!"
+    print "num words already in word2vec: " + str(len(w2v))
+    #parameter : (word_vecs, vocab, min_df=1, k=300)
+    add_unknown_words(w2v, vocab,1,vectorL)
+    #get_W(word_vecs, k=300)
+    W, word_idx_map = get_W(w2v,vectorL)
+    rand_vecs = {}
+    add_unknown_words(rand_vecs, vocab,1,vectorL)  #rand initial the word's vector 
+    W2, _ = get_W(rand_vecs,vectorL)  # because the word's vector is initialed so the word and it's vector donot need to match
+    cPickle.dump([revs_train,revs_test, W, W2, word_idx_map, vocab], open("tmp/mr.p", "wb"))
+    print "dataset created!"

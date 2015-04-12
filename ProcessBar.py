@@ -8,19 +8,19 @@ import time
 
 def progress(width,percent,t=1):
 	if t==1:
-		print "%s %d%%\r" %(('%%-%ds' % width ) %(width*percent/100*'='),percent),
+		print "\r%s %d%%" %(('%%-%ds' % width ) %(width*percent/100*'='),percent),
 	else:
-		print "%-2s%%\r" %percent,
+		print "\r%-2s%%" %percent,
 	sys.stdout.flush()
 
 	if percent >= 100:
+		print "\r",
 		sys.stdout.flush()
 
 
 if __name__ == "__main__":
 	# this is for test!
 	for i in xrange(100):
-		progress(50,i+1,2)
-		time.sleep(1)
+		progress(50,i+1,1)
+		time.sleep(0.1)
 
-	print "finish"
