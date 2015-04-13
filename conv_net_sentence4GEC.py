@@ -363,7 +363,7 @@ if __name__=="__main__":
     """
 
     # Common paramether!!
-    vectorL = 300
+    vectorL = 300 
     max_l = 8
     filter_h = 5
 
@@ -404,7 +404,7 @@ if __name__=="__main__":
     elif mode=="-static":
         print "model architecture: CNN-static"
         non_static=False
-    execfile("conv_net_classes.py")   # what this is mean ???
+    execfile("conv_net_classes4GEC.py")   # note that we have change the tag Here! 
     if word_vectors=="-rand":
         print "using: random vectors"
         U = W2
@@ -423,7 +423,7 @@ if __name__=="__main__":
                           conv_non_linear="relu",
                           hidden_units=[100,classNum], 
                           shuffle_batch=False, 
-                          n_epochs=4,                      # determine the time to loop 
+                          n_epochs=8,                      # determine the time to loop 
                           sqr_norm_lim=9,
                           non_static=non_static,
                           batch_size=50,

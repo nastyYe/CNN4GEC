@@ -163,6 +163,23 @@ class MLPDropout(object):
         y_pred = T.argmax(p_y_given_x, axis=1)
         return y_pred
 
+
+
+
+
+    def predict_tp(self, new_data):
+        # return the tag and probablity!
+        next_layer_input = new_data
+        for i,layer in enumerate(self.layers):
+            if i<len(self.layers)-1:
+                next_layer_input = self.activations[i](T.dot(next_layer_input,layer.W) + layer.b)
+            else:
+                p_y_given_x = T.nnet.softmax(T.dot(next_layer_input, layer.W) + layer.b)
+        y_pred = T.argmax(p_y_given_x, axis=1)
+        return y_pred,p_y_given_x
+
+
+
     def predict_p(self, new_data):
         next_layer_input = new_data
         for i,layer in enumerate(self.layers):

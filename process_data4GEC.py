@@ -147,7 +147,7 @@ def processPrep(corpus):
         assert False
 
     max_l = 8                                        # Set the max length of the sentence 
-    vectorL = 300                                     # set the length of the word word 
+    vectorL = 50                                     # set the length of the word word 
     out_file = "tmp/prep.data"                       # set the output file of the model
 
     print "loading data...",  
@@ -190,7 +190,7 @@ def processArtOrDet(corpus):
         print "Please choose the proper corpus!"
         assert False
         
-    vectorL = 50                                    # set the vector length 
+    vectorL = 300                                    # set the vector length 
     max_l = 8                                       # Set the max length of the sentence 8
     out_file = "tmp/artordet.data"                  # set the output file of the model
     
@@ -230,13 +230,12 @@ if __name__=="__main__":
 
     if et=="-artordet":
         print "Process the ArtorDet Error!"
-        print "The corpus you choose is %s" %corpus
+        print "The corpus you choose is %s and remember to change the vector length!" %corpus
         processArtOrDet(corpus)
     elif et=="-prep":
         print "Process the Prep Error!"
-        print "The corpus you choose is %s" %corpus
+        print "The corpus you choose is %s and remember to change the vector length!" %corpus
         processPrep(corpus)
     else:
         print "Please load the correct corpus: -prep -artordet"
         assert False
-
