@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import numpy as np
 import cPickle
 from collections import defaultdict
@@ -31,7 +32,7 @@ def readTrainTest(input1,vocab,clean_string=True):
             line = fr.readline()[:-1]
             if not line:
                 break
-            revs.append(line)
+            revs.append(line.lower())
 
             if clean_string:
                 orig_rev = clean_str(line.strip().lower())
@@ -135,7 +136,7 @@ def clean_str_sst(string):
     string = re.sub(r"\s{2,}", " ", string)    
     return string.strip().lower()
 
-def processPrep(corpus):
+def processPrep(corpus,vectorL):
     data_folder = [configure.fTrainTokenPrep,configure.fTestTokenPrep]
 
     if corpus == "-wiki":
@@ -147,8 +148,8 @@ def processPrep(corpus):
         assert False
 
     max_l = 8                                        # Set the max length of the sentence 
-    vectorL = 50                                     # set the length of the word word 
     out_file = "tmp/prep.data"                       # set the output file of the model
+    #vectorL set the length of the word word 
 
     print "loading data...",  
 
@@ -179,7 +180,7 @@ def processPrep(corpus):
     cPickle.dump([revs_train,revs_test, W, W2, word_idx_map, vocab], open(out_file, "wb"))
     print "dataset created!"
 
-def processArtOrDet(corpus):
+def processArtOrDet(corpus,vectorL):
     data_folder = [configure.fTrainTokenArt,configure.fTestTokenArt]
 
     if corpus == "-wiki":
@@ -190,7 +191,7 @@ def processArtOrDet(corpus):
         print "Please choose the proper corpus!"
         assert False
         
-    vectorL = 300                                    # set the vector length 
+    # vectorL set the vector length 
     max_l = 8                                       # Set the max length of the sentence 8
     out_file = "tmp/artordet.data"                  # set the output file of the model
     
@@ -224,18 +225,69 @@ def processArtOrDet(corpus):
     print "dataset created!"
     
 
+def processNn(corpus,vectorL):
+    data_folder = [configure.fTrainTokenNn,configure.fTestTokenNn]
+
+    if corpus == "-wiki":
+        w2v_file = configure.fTrainTestVecNn           # set the word2vector file
+    elif corpus == "-google":
+        w2v_file = "Backup/GoogleNews-vectors-negative300.bin"
+    else:
+        print "Please choose the proper corpus!"
+        assert False
+        
+    # vectorL set the vector length 
+    max_l = 8                                       # Set the max length of the sentence 8
+    out_file = "tmp/nn.data"                  # set the output file of the model
+    
+    print "loading data...",  
+
+    revs_train,revs_test,vocab = build_data(data_folder, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
+
+    print "data loaded!"
+    print "number of sentences: " + str(len(revs_train)+len(revs_test))
+    print "vocab size: " + str(len(vocab))
+    print "max sentence length: " + str(max_l)
+    print "loading word2vec vectors...",
+
+    """read the vector in the vocab word, if we don't use the google-news-corpus , we can use other method to replace!"""
+    if corpus == "-wiki":
+        w2v = load_word2vec(w2v_file)
+    elif corpus == "-google":
+        w2v = load_bin_vec(w2v_file,vocab)
+    else:
+        print "Please choose the porper corpus!"
+        assert False
+
+    print "word2vec loaded!"
+    print "num words already in word2vec: " + str(len(w2v))
+    add_unknown_words(w2v, vocab,1,vectorL)
+    W, word_idx_map = get_W(w2v,vectorL)
+    rand_vecs = {}
+    add_unknown_words(rand_vecs, vocab,1,vectorL)  #rand initial the word's vector 
+    W2, _ = get_W(rand_vecs,vectorL)  # because the word's vector is initialed so the word and it's vector donot need to match
+    cPickle.dump([revs_train,revs_test, W, W2, word_idx_map, vocab], open(out_file, "wb"))
+    print "dataset created!"
+
 if __name__=="__main__":    
+    if len(sys.argv)!=4:
+        print "python  command  [-nn|-artordet|-prep] [-wiki|-google] [vectorL]"
     et = sys.argv[1]     # error type: -artordet -prep 
     corpus = sys.argv[2] # corpus    : -google -wiki
+    vectorL = int(sys.argv[3])
 
     if et=="-artordet":
         print "Process the ArtorDet Error!"
-        print "The corpus you choose is %s and remember to change the vector length!" %corpus
-        processArtOrDet(corpus)
+        print "The corpus you choose is %s and the vector length is %s !" %(corpus,vectorL)
+        processArtOrDet(corpus,vectorL)
     elif et=="-prep":
         print "Process the Prep Error!"
-        print "The corpus you choose is %s and remember to change the vector length!" %corpus
-        processPrep(corpus)
+        print "The corpus you choose is %s and the vector lengths %s !" %(corpus,vectorL)
+        processPrep(corpus,vectorL)
+    elif et=="-nn":
+        print "Process the Nn Error!"
+        print "The corpus you choose is %s and the vector lengths %s !" %(corpus,vectorL)
+        processNn(corpus,vectorL)
     else:
         print "Please load the correct corpus: -prep -artordet"
         assert False

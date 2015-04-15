@@ -1,3 +1,4 @@
+#!/usr/bin/python
 """
 Modify the code: Convolutional Neural Networks for Sentence Classification 
 
@@ -25,6 +26,7 @@ import warnings
 import sys
 from Key2Value import PrepKV as PKV
 from Key2Value import ArtKV as AKV
+from Key2Value import NnKV as NKV
 import configure
 from ProcessBar import progress
 
@@ -183,10 +185,11 @@ def train_conv_net(datasets,
         test_layer0_output = conv_layer.predict(test_layer0_input, test_size)
         test_pred_layers.append(test_layer0_output.flatten(2))
     test_layer1_input = T.concatenate(test_pred_layers, 1)
-    test_y_pred = classifier.predict(test_layer1_input)
+    test_y_pred ,test_y_prob = classifier.predict_tp(test_layer1_input)
     test_error = T.mean(T.neq(test_y_pred, y))
     test_model_all = theano.function([x,y], test_error) #return the accuracy  
-    test_model_tag = theano.function([x],test_y_pred) #return the tag it predict  this is for GEC, no need for y
+    test_model_tag = theano.function([x],test_y_pred)   #return the tag it predict  this is for GEC, no need for y
+    test_model_prob = theano.function([x],test_y_prob)  #return the tag it predict  this is for GEC, no need for y
     #######IMPORTANT######
 
     #start training over mini-batches
@@ -199,16 +202,20 @@ def train_conv_net(datasets,
     while (epoch < n_epochs):        
         epoch = epoch + 1
         if shuffle_batch:
+            probar = 0
             for minibatch_index in np.random.permutation(range(n_train_batches)):
                 cost_epoch = train_model(minibatch_index)
                 set_zero(zero_vec)
-                progress(30,int(100*minibatch_index/float(n_train_batches-1) ),1)
+                #process the processBar
+                progress(30,int(100*probar/float(n_train_batches-1) ),1)
+                probar +=1
+
         else:
             for minibatch_index in xrange(n_train_batches):
                 cost_epoch = train_model(minibatch_index)  
                 set_zero(zero_vec)
+
                 progress(30,int(100*minibatch_index/float(n_train_batches-1) ),1)
-                #print minibatch_index
 
         train_losses = [test_model(i) for i in xrange(n_train_batches)]
         train_perf = 1 - np.mean(train_losses)
@@ -220,9 +227,10 @@ def train_conv_net(datasets,
             # Predict Work!
             test_loss = test_model_all(test_set_x,test_set_y)        
             test_tag  = test_model_tag(test_set_x)
+            test_prob  = test_model_prob(test_set_x)
             test_perf = 1- test_loss         
             
-    return test_perf,test_tag
+    return test_perf,test_tag,test_prob
 
 def shared_dataset(data_xy, borrow=True):
         """ Function that loads the dataset into shared variables
@@ -308,14 +316,14 @@ def get_idx_from_sent(words, word_idx_map, max_l, filter_h):
         x.append(0)
     return x
 
-def make_idx_data(revs_train,revs_test, word_idx_map, max_l, filter_h,isArt):
+def make_idx_data(revs_train,revs_test, word_idx_map, max_l, filter_h,ET):
     """
     Transforms sentences into a 2-d matrix.
     """
     train_pre,train_data, test_pre,test_data = [], [], [], []
 
-    train_pre,train_data = getTrainTest_idx_data(revs_train,word_idx_map, max_l, filter_h,isArt)
-    test_pre,test_data = getTrainTest_idx_data(revs_test,word_idx_map, max_l, filter_h,isArt)
+    train_pre,train_data = getTrainTest_idx_data(revs_train,word_idx_map, max_l, filter_h,ET)
+    test_pre,test_data = getTrainTest_idx_data(revs_test,word_idx_map, max_l, filter_h,ET)
  
     train_data = np.array(train_data,dtype="int")
     test_data = np.array(test_data,dtype="int")
@@ -323,14 +331,16 @@ def make_idx_data(revs_train,revs_test, word_idx_map, max_l, filter_h,isArt):
     return [train_data,test_data,train_pre,test_pre]     
 
 
-def getTrainTest_idx_data(revs,word_idx_map, max_l, filter_h,isArt):
+def getTrainTest_idx_data(revs,word_idx_map, max_l, filter_h,ET):
     data = []
     prefix = []
 
-    if isArt:
+    if ET=="-artordet":
         KV = AKV
-    else:
+    elif ET=="-prep":
         KV = PKV
+    else:
+        KV = NKV
 
     begin = 7
     
@@ -363,22 +373,35 @@ if __name__=="__main__":
     """
 
     # Common paramether!!
-    vectorL = 300 
     max_l = 8
     filter_h = 5
 
+    if len(sys.argv)!=6:
+        print "python command [-artordet|-prep|-nn] [-nonstatic|-static] [-rand|-word2vec] [vecotrL] [traintime]"
+        assert False
+
     et = sys.argv[1]
+    mode= sys.argv[2] # static or not
+    word_vectors = sys.argv[3]   # random or not 
+    vectorL = int(sys.argv[4])
+    traintime = int(sys.argv[5])
+    ET = et
+
+
     if et=="-artordet":
         input_file = "tmp/artordet.data"
         testRes = configure.fCNNResultArt
         classNum = 3
-        isArt = True
         print "The Vector lenght is %s and classNum is %s" %(vectorL,classNum)
     elif et=="-prep":
         input_file = "tmp/prep.data"
         testRes = configure.fCNNResultPrep
         classNum = 9
-        isArt = False
+        print "The Vector lenght is %s and classNum is %s" %(vectorL,classNum)
+    elif et=="-nn":
+        input_file = "tmp/nn.data"
+        testRes = configure.fCNNResultNn
+        classNum = 2
         print "The Vector lenght is %s and classNum is %s" %(vectorL,classNum)
     else:
         print """Please input the error type: -artordet -prep
@@ -394,9 +417,6 @@ if __name__=="__main__":
     revs_train,revs_test, W, W2, word_idx_map, vocab = x[0], x[1], x[2], x[3], x[4], x[5]
     print "data loaded!"
 
-    #Load the input args
-    mode= sys.argv[2] # static or not
-    word_vectors = sys.argv[3]   # random or not 
 
     if mode=="-nonstatic":
         print "model architecture: CNN-non-static"
@@ -413,17 +433,17 @@ if __name__=="__main__":
         U = W
     results = []
 
-    datasets = make_idx_data(revs_train,revs_test, word_idx_map, max_l, filter_h,isArt)
+    datasets = make_idx_data(revs_train,revs_test, word_idx_map, max_l, filter_h,ET)
 
-    perf,test_tag = train_conv_net(datasets,
+    perf,test_tag,test_prob = train_conv_net(datasets,
                           U,
                           img_w=vectorL, 
                           lr_decay=0.95,
                           filter_hs=[3,4,5],
                           conv_non_linear="relu",
-                          hidden_units=[100,classNum], 
-                          shuffle_batch=False, 
-                          n_epochs=8,                      # determine the time to loop 
+                          hidden_units=[200,classNum],     # 100
+                          shuffle_batch=True,               # is change the order of instance
+                          n_epochs=traintime,                      # determine the time to loop 
                           sqr_norm_lim=9,
                           non_static=non_static,
                           batch_size=50,
@@ -433,8 +453,10 @@ if __name__=="__main__":
 
     test_prefix = datasets[3]
     res = list()
-    for item in zip(test_prefix,test_tag):
-        res.append("\t".join(item[0][:-1])+"\t"+str(item[1])+"\n")
+    # output the prefix information, tag and the probablity!!
+    for item in zip(test_prefix,test_tag,test_prob):
+        prob = [str(p) for p in item[2]]
+        res.append("\t".join(item[0][:-1])+"\t"+str(item[1])+"\t"+"\t".join(prob)+"\n")
 
     # Save the file!
     open(testRes,"w").writelines(res)

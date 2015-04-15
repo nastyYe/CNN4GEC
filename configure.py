@@ -13,15 +13,18 @@ pCorpusPickle = phome + 'Graduate/Corpus/NUCLE/pickle/'
 pTokenFilePrep = phome + 'Graduate/Corpus/Prep/tokenFeature/'
 pVectorFilePrep = phome + 'Graduate/Corpus/Prep/vectorFeature/'
 
-
 pTokenFileArt = phome + 'Graduate/Corpus/ArtOrDet/tokenFeature/'
 pVectorFileArt = phome + 'Graduate/Corpus/ArtOrDet/vectorFeature/'
+
+
+pTokenFileNn = phome + 'Graduate/Corpus/Nn/tokenFeature/'
+pVectorFileNn = phome + 'Graduate/Corpus/Nn/vectorFeature/'
 
 pCorpusWord2vec = phome + "Graduate/Corpus/word2vec/"
 
 pOutputPrep = phome + "Graduate/Output/Prep/"
 pOutputArt = phome + "Graduate/Output/ArtOrDet/"
-
+pOutputNn = phome + "Graduate/Output/Nn/"
 
 # train *.conll 文件的位置,已经处理pickle结果存放的位置;
 fCorpusTrainConll = pCorpusTrain + 'conll13st-preprocessed.conll'
@@ -39,7 +42,7 @@ fCorpusPickleTestSentence = pCorpusPickle + 'test.sentence'
 fCorpusTestM2 = pCorpusTest + "official-preprocessed.m2"
 fCorpusTestPrepM2 = pCorpusTest + "Perp.m2"
 fCorpusTestArtOrDetM2 = pCorpusTest + "ArtOrDet.m2"
-
+fCorpusTestNnM2 = pCorpusTest + "Nn.m2"
 
 # train *.ann position
 fCorpusTrainAnn = pCorpusTrain + 'conll13st-preprocessed.conll.ann'
@@ -60,22 +63,28 @@ fword2vecUVec = pCorpusWord2vec + "word2vec/uvector/word2vec%s.dict"
 #######  The upper is the same  ########   The upper is the same   ########
 #######  The upper is the same  ########   The upper is the same   ########
 
-
+## token file
 fTrainTokenPrep = pTokenFilePrep + "trainTokenFeature.prep"
 fTestTokenPrep  = pTokenFilePrep + "testTokenFeature.prep"
 
 fTrainTokenArt = pTokenFileArt + "trainTokenFeature.art"
 fTestTokenArt  = pTokenFileArt + "testTokenFeature.art"
 
+fTrainTokenNn = pTokenFileNn + "trainTokenFeature.nn"
+fTestTokenNn  = pTokenFileNn + "testTokenFeature.nn"
 
-
+## IW  Vec
 fTrainTestIWPrep = pVectorFilePrep + "temp/traintestIW.dict"
 fTrainTestVecPrep = pVectorFilePrep + "temp/traintestVec.dict"
 
 fTrainTestIWArt = pVectorFileArt + "temp/traintestIW.dict"
 fTrainTestVecArt = pVectorFileArt + "temp/traintestVec.dict"
 
+fTrainTestIWNn = pVectorFileNn + "temp/traintestIW.dict"
+fTrainTestVecNn = pVectorFileNn + "temp/traintestVec.dict"
 
+
+## train & test vector
 
 fTrainVecPrep = pVectorFilePrep + "train.vec"
 fTrainUVecPrep = pVectorFilePrep + "train.uvec"
@@ -125,6 +134,12 @@ fCNNCorrectResPrep = pOutputPrep + "CNN/Result/CNNCorrect.result"
 fCNNModelArt = pOutputArt + "CNN/model/CNN-"
 fCNNResultArt = pOutputArt + "CNN/Result/CNN.result"
 fCNNCorrectResArt = pOutputArt + "CNN/Result/CNNCorrect.result"
+
+
+fCNNModelNn = pOutputNn + "CNN/model/CNN-"
+fCNNResultNn = pOutputNn + "CNN/Result/CNN.result"
+fCNNCorrectResNn = pOutputNn + "CNN/Result/CNNCorrect.result"
+
 
 
 
