@@ -7,7 +7,7 @@ import pandas as pd
 import configure
 import pickle
 
-def build_data(data_folder,clean_string=True):
+def build_data(data_folder,wsize,clean_string=True):
     """
     Loads data and split into 10 folds.
     vocab: dict key:word value: the number of word occurence in the corpus
@@ -18,13 +18,13 @@ def build_data(data_folder,clean_string=True):
 
     vocab = defaultdict(float)
 
-    revs_train = readTrainTest(train_file,vocab)
-    revs_test  = readTrainTest(test_file,vocab)
+    revs_train = readTrainTest(train_file,vocab,wsize)
+    revs_test  = readTrainTest(test_file,vocab,wsize)
 
     return revs_train,revs_test,vocab
     
 
-def readTrainTest(input1,vocab,clean_string=True):
+def readTrainTest(input1,vocab,wsize,clean_string=False):
     revs = []
     begin = 7
     with open(input1,'r') as fr:
@@ -40,7 +40,12 @@ def readTrainTest(input1,vocab,clean_string=True):
             else:
                 orig_rev = line.strip().lower()
 
-            words = set(orig_rev.split()[begin:])
+            orig_rev = orig_rev.split()
+            half = (len(orig_rev)-begin)/2
+            half = half - wsize
+            assert half > 0
+            words = set(orig_rev[begin+half:-half])
+            #words = set(orig_rev.split()[begin:])
             for word in words:
                 vocab[word] += 1
 
@@ -180,7 +185,7 @@ def processPrep(corpus,vectorL):
     cPickle.dump([revs_train,revs_test, W, W2, word_idx_map, vocab], open(out_file, "wb"))
     print "dataset created!"
 
-def processArtOrDet(corpus,vectorL):
+def processArtOrDet(corpus,vectorL,wsize):
     data_folder = [configure.fTrainTokenArt,configure.fTestTokenArt]
 
     if corpus == "-wiki":
@@ -192,12 +197,12 @@ def processArtOrDet(corpus,vectorL):
         assert False
         
     # vectorL set the vector length 
-    max_l = 8                                       # Set the max length of the sentence 8
+    max_l = wsize*2                                 # Set the max length of the sentence 8
     out_file = "tmp/artordet.data"                  # set the output file of the model
     
     print "loading data...",  
 
-    revs_train,revs_test,vocab = build_data(data_folder, clean_string=True)  #revs: the list of Datatum   vocab: dict of word-frequency
+    revs_train,revs_test,vocab = build_data(data_folder,wsize,clean_string=False)  #revs: the list of Datatum   vocab: dict of word-frequency
 
     print "data loaded!"
     print "number of sentences: " + str(len(revs_train)+len(revs_test))
@@ -270,16 +275,17 @@ def processNn(corpus,vectorL):
     print "dataset created!"
 
 if __name__=="__main__":    
-    if len(sys.argv)!=4:
-        print "python  command  [-nn|-artordet|-prep] [-wiki|-google] [vectorL]"
+    if len(sys.argv)!=5:
+        print "python  command  [-nn|-artordet|-prep] [-wiki|-google] [vectorL] [wsize]"
     et = sys.argv[1]     # error type: -artordet -prep 
     corpus = sys.argv[2] # corpus    : -google -wiki
     vectorL = int(sys.argv[3])
+    wsize = int(sys.argv[4])
 
     if et=="-artordet":
         print "Process the ArtorDet Error!"
-        print "The corpus you choose is %s and the vector length is %s !" %(corpus,vectorL)
-        processArtOrDet(corpus,vectorL)
+        print "The corpus you choose is %s , the vector length is %s and the wsize is %s !" %(corpus,vectorL,wsize)
+        processArtOrDet(corpus,vectorL,wsize)
     elif et=="-prep":
         print "Process the Prep Error!"
         print "The corpus you choose is %s and the vector lengths %s !" %(corpus,vectorL)

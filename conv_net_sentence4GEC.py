@@ -331,7 +331,7 @@ def make_idx_data(revs_train,revs_test, word_idx_map, max_l, filter_h,ET):
     return [train_data,test_data,train_pre,test_pre]     
 
 
-def getTrainTest_idx_data(revs,word_idx_map, max_l, filter_h,ET):
+def getTrainTest_idx_data(revs,word_idx_map,max_l,filter_h,ET):
     data = []
     prefix = []
 
@@ -346,7 +346,9 @@ def getTrainTest_idx_data(revs,word_idx_map, max_l, filter_h,ET):
     
     for rev in revs:
         rev = rev.strip().split()
-        words = rev[begin:]
+        half = (len(rev)-begin)/2
+        half = half - max_l/2
+        words = rev[begin+half:-half]
         
         pre   = rev[:begin]  #nid,pid,sid,index,ti,sw,aw
         pre[-1] = KV.get(pre[-1],"0")
@@ -373,19 +375,21 @@ if __name__=="__main__":
     """
 
     # Common paramether!!
-    max_l = 8
     filter_h = 5
 
-    if len(sys.argv)!=6:
-        print "python command [-artordet|-prep|-nn] [-nonstatic|-static] [-rand|-word2vec] [vecotrL] [traintime]"
+    if len(sys.argv)!=7:
+        print "python command [-artordet|-prep|-nn] [-nonstatic|-static] [-rand|-word2vec] [vecotrL] [wsize] [traintime]"
+        print "Be careful when you change the max lenght of sentence!"
         assert False
 
     et = sys.argv[1]
     mode= sys.argv[2] # static or not
     word_vectors = sys.argv[3]   # random or not 
     vectorL = int(sys.argv[4])
-    traintime = int(sys.argv[5])
+    wsize = int(sys.argv[5])
+    traintime = int(sys.argv[6])
     ET = et
+    max_l = 2*wsize
 
 
     if et=="-artordet":
@@ -393,18 +397,21 @@ if __name__=="__main__":
         testRes = configure.fCNNResultArt
         classNum = 3
         print "The Vector lenght is %s and classNum is %s" %(vectorL,classNum)
+        print "The test Res will be saved at %s" %testRes
     elif et=="-prep":
         input_file = "tmp/prep.data"
         testRes = configure.fCNNResultPrep
-        classNum = 9
+        classNum = 7
         print "The Vector lenght is %s and classNum is %s" %(vectorL,classNum)
+        print "The test Res will be saved at %s" %testRes
     elif et=="-nn":
         input_file = "tmp/nn.data"
         testRes = configure.fCNNResultNn
         classNum = 2
         print "The Vector lenght is %s and classNum is %s" %(vectorL,classNum)
+        print "The test Res will be saved at %s" %testRes
     else:
-        print """Please input the error type: -artordet -prep
+        print """Please input the error type: -artordet -prep -nn
                  Please input the mode      : -nonstatic -static
                  please input the vector init: -word2vec -rand
               """
@@ -439,9 +446,9 @@ if __name__=="__main__":
                           U,
                           img_w=vectorL, 
                           lr_decay=0.95,
-                          filter_hs=[3,4,5],
+                          filter_hs=[3,4,5],          # 3,4,5
                           conv_non_linear="relu",
-                          hidden_units=[200,classNum],     # 100
+                          hidden_units=[100,classNum],     # 100
                           shuffle_batch=True,               # is change the order of instance
                           n_epochs=traintime,                      # determine the time to loop 
                           sqr_norm_lim=9,
